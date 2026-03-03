@@ -1,6 +1,7 @@
 import { db, Entry } from '@/lib/db';
 import { CryptoService } from '@/lib/crypto';
 import { FirebaseSync } from '@/lib/firebaseSync';
+import { useAuthStore } from '@/store/authStoreFirebase';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { v4 as uuid } from 'uuid';
 
@@ -13,6 +14,14 @@ export function useEntries(vaultId?: string) {
   );
 
   const loading = entries === undefined;
+
+  // Ensure Firebase sync is running before any Firebase operation
+  const ensureSync = () => {
+    const { firebaseUser } = useAuthStore.getState();
+    if (firebaseUser) {
+      FirebaseSync.startSync(firebaseUser.uid);
+    }
+  };
 
   // Get decrypted entry
   const getDecryptedEntry = async (id: string) => {
@@ -48,7 +57,12 @@ export function useEntries(vaultId?: string) {
     await db.entries.add(entry);
 
     // Sync to Firebase
-    await FirebaseSync.uploadEntry(entry);
+    try {
+      ensureSync();
+      await FirebaseSync.uploadEntry(entry);
+    } catch (err) {
+      console.error('Failed to sync new entry to Firebase:', err);
+    }
 
     return entry;
   };
@@ -68,9 +82,14 @@ export function useEntries(vaultId?: string) {
     await db.entries.update(id, toUpdate);
 
     // Get updated entry and sync to Firebase
-    const entry = await db.entries.get(id);
-    if (entry) {
-      await FirebaseSync.uploadEntry(entry);
+    try {
+      ensureSync();
+      const entry = await db.entries.get(id);
+      if (entry) {
+        await FirebaseSync.uploadEntry(entry);
+      }
+    } catch (err) {
+      console.error('Failed to sync updated entry to Firebase:', err);
     }
   };
 
@@ -80,7 +99,12 @@ export function useEntries(vaultId?: string) {
     await db.entries.delete(id);
 
     // Delete from Firebase
-    await FirebaseSync.deleteEntry(id);
+    try {
+      ensureSync();
+      await FirebaseSync.deleteEntry(id);
+    } catch (err) {
+      console.error('Failed to sync deletion to Firebase:', err);
+    }
   };
 
   return {
