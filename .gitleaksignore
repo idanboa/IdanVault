@@ -1,3 +1,7 @@
 # Firebase API keys are safe to commit - they're meant to be public
 # Real security comes from Firestore Security Rules and domain restrictions
 src/lib/firebase.ts:gcp-api-key:7
+
+# False positives - variable names, not actual secrets
+src/store/authStoreFirebase.ts:generic-api-key:98
+src/store/authStoreFirebase.ts:generic-api-key:114

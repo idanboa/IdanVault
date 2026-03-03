@@ -61,22 +61,58 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     // Try to create Firebase user, or sign in if already exists
     let userCredential;
+    let isExistingAccount = false;
     try {
       userCredential = await createUserWithEmailAndPassword(auth, email, masterPassword);
     } catch (error: any) {
       // If email already in use, sign in instead
       if (error.code === 'auth/email-already-in-use') {
         userCredential = await signInWithEmailAndPassword(auth, email, masterPassword);
+        isExistingAccount = true;
       } else {
         throw error;
       }
     }
 
-    // Derive encryption key and hash
-    const { encryptionKey, salt, hash } = await CryptoService.deriveMasterKey(
-      masterPassword,
-      email
-    );
+    let salt: string;
+    let hash: string;
+    let encryptionKey: string;
+
+    if (isExistingAccount) {
+      // Existing account - fetch salt from Firestore
+      const userData = await FirebaseSync.getUserData(userCredential.user.uid);
+      if (!userData) {
+        await signOut(auth);
+        throw new Error('Account exists but no user data found in Firestore. Please contact support.');
+      }
+
+      // Derive key with existing salt from Firestore
+      const derived = await CryptoService.deriveMasterKey(
+        masterPassword,
+        email,
+        userData.salt
+      );
+
+      salt = userData.salt;
+      hash = userData.masterPasswordHash;
+      encryptionKey = derived.encryptionKey;
+
+      // Verify password
+      if (hash !== derived.hash) {
+        await signOut(auth);
+        throw new Error('Invalid password');
+      }
+    } else {
+      // New account - generate new salt
+      const derived = await CryptoService.deriveMasterKey(
+        masterPassword,
+        email
+      );
+
+      salt = derived.salt;
+      hash = derived.hash;
+      encryptionKey = derived.encryptionKey;
+    }
 
     // Create local user
     const userId = uuid();
@@ -102,8 +138,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Get user
     const user = await db.user.get(userId);
 
-    // Save user data to Firestore (salt and hash for cross-device sync)
-    await FirebaseSync.saveUserData(userCredential.user.uid, email, salt, hash);
+    // Save user data to Firestore (only if new account)
+    if (!isExistingAccount) {
+      await FirebaseSync.saveUserData(userCredential.user.uid, email, salt, hash);
+    }
 
     // Start Firebase sync
     FirebaseSync.startSync(userCredential.user.uid);
