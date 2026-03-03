@@ -6,7 +6,7 @@ import { useEntries } from '@/hooks/useEntriesFirebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Lock, CreditCard, FileText, Server, User, LogOut, Search, Eye, EyeOff, Copy } from 'lucide-react';
+import { Lock, CreditCard, FileText, Server, User, LogOut, Search, Eye, EyeOff, Copy, Plus, Trash2, Edit } from 'lucide-react';
 
 const CATEGORY_ICONS: Record<Entry['category'], any> = {
   LOGIN: Lock,
@@ -25,7 +25,7 @@ export function VaultPage() {
 
   const navigate = useNavigate();
   const { logout } = useAuthStore();
-  const { entries, loading, getDecryptedEntry } = useEntries();
+  const { entries, loading, getDecryptedEntry, deleteEntry } = useEntries();
 
   useEffect(() => {
     const filtered = entries.filter(entry =>
@@ -51,6 +51,16 @@ export function VaultPage() {
   const handleLogout = async () => {
     await logout();
     navigate('/setup');
+  };
+
+  const handleDelete = async () => {
+    if (!selectedEntry) return;
+
+    if (window.confirm(`Delete "${selectedEntry.title}"?`)) {
+      await deleteEntry(selectedEntry.id);
+      setSelectedEntry(null);
+      setDecryptedData(null);
+    }
   };
 
   const getFieldValue = (field: any) => {
@@ -79,10 +89,16 @@ export function VaultPage() {
             <h1 className="text-3xl font-bold">IdanVault</h1>
             <p className="text-sm text-muted-foreground">{entries.length} items</p>
           </div>
-          <Button onClick={handleLogout} variant="outline">
-            <LogOut className="mr-2 h-4 w-4" />
-            Logout
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate('/new')} variant="outline">
+              <Plus className="mr-2 h-4 w-4" />
+              New
+            </Button>
+            <Button onClick={handleLogout} variant="outline">
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -137,8 +153,15 @@ export function VaultPage() {
             {selectedEntry && decryptedData ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>{selectedEntry.title}</CardTitle>
-                  <CardDescription>{selectedEntry.category}</CardDescription>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle>{selectedEntry.title}</CardTitle>
+                      <CardDescription>{selectedEntry.category}</CardDescription>
+                    </div>
+                    <Button onClick={handleDelete} variant="destructive" size="sm">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {decryptedData.fields?.map((field: any) => (
