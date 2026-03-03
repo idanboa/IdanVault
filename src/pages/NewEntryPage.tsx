@@ -20,7 +20,7 @@ export function NewEntryPage() {
 
   const navigate = useNavigate();
   const { createEntry } = useEntries();
-  const { isLocked } = useAuthStore();
+  const { isLocked, isAuthenticated } = useAuthStore();
 
   // Enable auto-lock
   useAutoLock(true);
@@ -31,6 +31,13 @@ export function NewEntryPage() {
       navigate('/lock');
     }
   }, [isLocked, navigate]);
+
+  // Redirect to login if not authenticated (no encryption key)
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

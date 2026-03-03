@@ -11,7 +11,7 @@ import { DebugPage } from './pages/DebugPage';
 
 function App() {
   const [isSetupComplete, setIsSetupComplete] = useState<boolean | null>(null);
-  const { checkSetup, initAuth, isLoading, firebaseUser, user } = useAuthStore();
+  const { checkSetup, initAuth, isLoading, firebaseUser, user, isAuthenticated, isLocked } = useAuthStore();
 
   useEffect(() => {
     initAuth();
@@ -31,9 +31,19 @@ function App() {
 
   // Determine which page to show
   const getDefaultRoute = () => {
-    // If local user exists, go to vault
-    if (isSetupComplete) {
+    // If locked, go to lock screen
+    if (isLocked && user) {
+      return <Navigate to="/lock" replace />;
+    }
+
+    // If authenticated (encryption key in memory), go to vault
+    if (isAuthenticated && isSetupComplete) {
       return <Navigate to="/vault" replace />;
+    }
+
+    // If local user exists but not authenticated, need to login
+    if (isSetupComplete && !isAuthenticated) {
+      return <Navigate to="/login" replace />;
     }
 
     // If Firebase user exists but no local user, go to login

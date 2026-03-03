@@ -25,7 +25,7 @@ export function VaultPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
-  const { logout, isLocked } = useAuthStore();
+  const { logout, isLocked, isAuthenticated } = useAuthStore();
   const { entries, loading, getDecryptedEntry, deleteEntry, updateEntry } = useEntries();
 
   // Enable auto-lock after 15 minutes of inactivity
@@ -44,6 +44,13 @@ export function VaultPage() {
       navigate('/lock');
     }
   }, [isLocked, navigate]);
+
+  // Redirect to login if not authenticated (no encryption key)
+  useEffect(() => {
+    if (!isAuthenticated && !loading) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, loading, navigate]);
 
   const handleSelectEntry = async (entry: Entry) => {
     setSelectedEntry(entry);
