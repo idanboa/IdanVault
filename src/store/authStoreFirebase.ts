@@ -102,6 +102,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Get user
     const user = await db.user.get(userId);
 
+    // Save user data to Firestore (salt and hash for cross-device sync)
+    await FirebaseSync.saveUserData(userCredential.user.uid, email, salt, hash);
+
     // Start Firebase sync
     FirebaseSync.startSync(userCredential.user.uid);
 
@@ -118,27 +121,75 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const userCredential = await signInWithEmailAndPassword(auth, email, masterPassword);
 
     // Get local user
-    const user = await db.user.where('email').equals(email).first();
+    let user = await db.user.where('email').equals(email).first();
+
+    // If no local user, fetch from Firestore and create locally
     if (!user) {
-      await signOut(auth);
-      return false;
+      const userData = await FirebaseSync.getUserData(userCredential.user.uid);
+      if (!userData) {
+        await signOut(auth);
+        return false;
+      }
+
+      // Derive key with Firestore salt
+      const { encryptionKey, hash } = await CryptoService.deriveMasterKey(
+        masterPassword,
+        email,
+        userData.salt
+      );
+
+      // Verify password
+      if (hash !== userData.masterPasswordHash) {
+        await signOut(auth);
+        return false;
+      }
+
+      // Create local user with Firestore data
+      const userId = uuid();
+      await db.user.add({
+        id: userId,
+        email: userData.email,
+        masterPasswordHash: userData.masterPasswordHash,
+        salt: userData.salt,
+        createdAt: Date.now()
+      });
+
+      // Create default vault if needed
+      const vaults = await db.vaults.toArray();
+      if (vaults.length === 0) {
+        await db.vaults.add({
+          id: uuid(),
+          name: 'Personal',
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        });
+      }
+
+      user = await db.user.get(userId);
+      if (!user) {
+        await signOut(auth);
+        return false;
+      }
+
+      // Store encryption key in memory
+      CryptoService.setEncryptionKey(encryptionKey);
+    } else {
+      // Local user exists, derive key with local salt
+      const { encryptionKey, hash } = await CryptoService.deriveMasterKey(
+        masterPassword,
+        email,
+        user.salt
+      );
+
+      // Verify password
+      if (hash !== user.masterPasswordHash) {
+        await signOut(auth);
+        return false;
+      }
+
+      // Store encryption key in memory
+      CryptoService.setEncryptionKey(encryptionKey);
     }
-
-    // Derive key with user's salt
-    const { encryptionKey, hash } = await CryptoService.deriveMasterKey(
-      masterPassword,
-      email,
-      user.salt
-    );
-
-    // Verify password
-    if (hash !== user.masterPasswordHash) {
-      await signOut(auth);
-      return false;
-    }
-
-    // Store encryption key in memory
-    CryptoService.setEncryptionKey(encryptionKey);
 
     // Start Firebase sync
     FirebaseSync.startSync(userCredential.user.uid);

@@ -5,7 +5,8 @@ import {
   deleteDoc,
   onSnapshot,
   query,
-  where
+  where,
+  getDoc
 } from 'firebase/firestore';
 import { firestore } from './firebase';
 import { db, Entry } from './db';
@@ -107,5 +108,38 @@ export class FirebaseSync {
     for (const entry of entries) {
       await this.uploadEntry(entry);
     }
+  }
+
+  /**
+   * Save user data (salt and hash) to Firestore
+   */
+  static async saveUserData(userId: string, email: string, salt: string, masterPasswordHash: string) {
+    const userRef = doc(firestore, 'users', userId);
+    await setDoc(userRef, {
+      email,
+      salt,
+      masterPasswordHash,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    });
+  }
+
+  /**
+   * Get user data from Firestore by Firebase UID
+   */
+  static async getUserData(userId: string): Promise<{ email: string; salt: string; masterPasswordHash: string } | null> {
+    const userRef = doc(firestore, 'users', userId);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+      const data = userSnap.data();
+      return {
+        email: data.email,
+        salt: data.salt,
+        masterPasswordHash: data.masterPasswordHash
+      };
+    }
+
+    return null;
   }
 }
