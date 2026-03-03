@@ -1,30 +1,23 @@
-# IdanVault 🔐
+# IdanVault
 
-A self-hosted password manager built with React, TypeScript, and client-side encryption.
+A self-hosted password manager built with React, TypeScript, and client-side encryption. Replaces 1Password with a zero-knowledge architecture deployed to GitHub Pages.
 
 ## Features
 
-- 🔒 **Zero-knowledge encryption** - Your passwords never leave your device unencrypted
-- 🔑 **AES-256 encryption** with PBKDF2 key derivation (100,000 iterations)
-- 📱 **Mobile-friendly** - Works on all devices
-- 💾 **IndexedDB storage** - All data stored locally in your browser
-- 📦 **1Password import** - Import your existing passwords from 1Password
-- 🚀 **Static hosting** - Deploy to GitHub Pages for free
-
-## Security
-
-- Master password never stored
-- Client-side encryption only
-- Encryption key kept in memory only
-- Auto-lock on inactivity (15 minutes)
-- Zero-knowledge architecture
+- **Zero-knowledge encryption** - AES-256 with PBKDF2 key derivation (100k iterations). Passwords never leave your device unencrypted.
+- **Cross-device sync** - Firebase Auth + Firestore keeps entries in sync across all your devices. Only encrypted data is stored remotely.
+- **Biometric unlock** - Face ID / Touch ID via WebAuthn for quick unlock without re-typing your master password.
+- **Auto-lock** - Locks after 15 minutes of inactivity.
+- **1Password import** - Import existing passwords from 1Password CSV exports.
+- **Mobile-friendly** - Responsive design that works on all devices, with iOS Safari optimizations.
+- **Static hosting** - Deployed to GitHub Pages via GitHub Actions.
 
 ## Quick Start
 
-1. Visit the deployed app (see GitHub Pages URL above)
-2. Create your master password
+1. Visit the deployed app at your GitHub Pages URL
+2. Create your master password (this derives your encryption key)
 3. Import your 1Password data (optional)
-4. Start managing your passwords securely!
+4. Start managing your passwords
 
 ## Development
 
@@ -33,14 +26,31 @@ npm install
 npm run dev
 ```
 
-## Technologies
+## Deployment
 
-- React 18 + TypeScript
-- Vite
+Push to `main` triggers automatic deployment via GitHub Actions to GitHub Pages.
+
+```bash
+npm run build    # TypeScript check + Vite build
+git push         # Triggers deploy workflow
+```
+
+## Firebase Setup
+
+The app requires a Firebase project with:
+- **Authentication**: Email/password sign-in enabled
+- **Firestore**: Database with security rules from `firestore.rules`
+- Firebase config is in `src/lib/firebase.ts`
+
+## Tech Stack
+
+- React 18 + TypeScript + Vite
 - Tailwind CSS + shadcn/ui
-- Dexie.js (IndexedDB)
+- Firebase Auth + Firestore (cross-device sync)
+- Dexie.js + dexie-react-hooks (IndexedDB, reactive queries)
 - crypto-js (AES-256 encryption)
 - Zustand (state management)
+- Sonner (toast notifications)
 
 ## License
 
