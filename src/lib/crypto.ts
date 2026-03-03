@@ -2,6 +2,7 @@ import CryptoJS from 'crypto-js';
 
 export class CryptoService {
   private static encryptionKey: string | null = null;
+  private static credentials: { email: string; password: string } | null = null;
 
   /**
    * Derive encryption key from master password
@@ -89,10 +90,25 @@ export class CryptoService {
   }
 
   /**
-   * Clear encryption key from memory
+   * Store credentials in memory for re-authentication
+   */
+  static setCredentials(email: string, password: string) {
+    this.credentials = { email, password };
+  }
+
+  /**
+   * Get stored credentials
+   */
+  static getCredentials(): { email: string; password: string } | null {
+    return this.credentials;
+  }
+
+  /**
+   * Clear encryption key and credentials from memory
    */
   static clearKey() {
     this.encryptionKey = null;
+    this.credentials = null;
   }
 
   /**

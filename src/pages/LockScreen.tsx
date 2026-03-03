@@ -37,13 +37,34 @@ export function LockScreen() {
         // Set encryption key directly
         CryptoService.setEncryptionKey(encryptionKey);
 
+        // Restore stored credentials for Firebase re-authentication
+        const storedCreds = BiometricAuth.getStoredCredentials();
+        const { auth } = await import('@/lib/firebase');
+
+        if (storedCreds) {
+          CryptoService.setCredentials(storedCreds.email, storedCreds.password);
+
+          // Re-authenticate with Firebase if needed
+          if (!auth.currentUser) {
+            try {
+              const { signInWithEmailAndPassword } = await import('firebase/auth');
+              await signInWithEmailAndPassword(auth, storedCreds.email, storedCreds.password);
+            } catch (err) {
+              console.error('Firebase re-auth failed:', err);
+            }
+          }
+        }
+
         // Restart Firebase sync
-        if (firebaseUser) {
+        if (auth.currentUser) {
+          FirebaseSync.startSync(auth.currentUser.uid);
+        } else if (firebaseUser) {
           FirebaseSync.startSync(firebaseUser.uid);
         }
 
         // Set authenticated state
         useAuthStore.setState({
+          firebaseUser: auth.currentUser,
           isAuthenticated: true,
           isLocked: false
         });

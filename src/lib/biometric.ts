@@ -11,6 +11,7 @@
 
 const CREDENTIAL_KEY = 'idanvault_webauthn_credential';
 const ENCRYPTED_KEY_STORE = 'idanvault_biometric_key';
+const BIOMETRIC_CREDS = 'idanvault_biometric_creds';
 
 export class BiometricAuth {
   /**
@@ -38,7 +39,7 @@ export class BiometricAuth {
    * Register biometric auth and store the encryption key
    * Call this after successful master password login
    */
-  static async register(encryptionKey: string, userId: string): Promise<boolean> {
+  static async register(encryptionKey: string, userId: string, email?: string, password?: string): Promise<boolean> {
     try {
       if (!this.isAvailable()) return false;
 
@@ -78,6 +79,11 @@ export class BiometricAuth {
       // Store the encryption key (protected by same-origin + biometric verification)
       localStorage.setItem(ENCRYPTED_KEY_STORE, encryptionKey);
 
+      // Store credentials for Firebase re-authentication
+      if (email && password) {
+        localStorage.setItem(BIOMETRIC_CREDS, JSON.stringify({ email, password }));
+      }
+
       return true;
     } catch (error) {
       console.error('Biometric registration failed:', error);
@@ -114,6 +120,7 @@ export class BiometricAuth {
       if (!assertion) return null;
 
       // Biometric verification succeeded - return the stored encryption key
+      // Also restore credentials for Firebase re-authentication
       return localStorage.getItem(ENCRYPTED_KEY_STORE);
     } catch (error) {
       console.error('Biometric authentication failed:', error);
@@ -122,10 +129,26 @@ export class BiometricAuth {
   }
 
   /**
+   * Get stored credentials for Firebase re-authentication
+   */
+  static getStoredCredentials(): { email: string; password: string } | null {
+    const creds = localStorage.getItem(BIOMETRIC_CREDS);
+    if (creds) {
+      try {
+        return JSON.parse(creds);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Remove biometric auth data
    */
   static clear() {
     localStorage.removeItem(CREDENTIAL_KEY);
     localStorage.removeItem(ENCRYPTED_KEY_STORE);
+    localStorage.removeItem(BIOMETRIC_CREDS);
   }
 }

@@ -42,24 +42,40 @@ export function LoginPage() {
         // Set encryption key directly
         CryptoService.setEncryptionKey(encryptionKey);
 
+        // Restore stored credentials for Firebase re-authentication
+        const storedCreds = BiometricAuth.getStoredCredentials();
+        const { auth } = await import('@/lib/firebase');
+
+        if (storedCreds) {
+          CryptoService.setCredentials(storedCreds.email, storedCreds.password);
+
+          // Sign in to Firebase
+          if (!auth.currentUser) {
+            try {
+              const { signInWithEmailAndPassword } = await import('firebase/auth');
+              await signInWithEmailAndPassword(auth, storedCreds.email, storedCreds.password);
+            } catch (err) {
+              console.error('Firebase re-auth failed:', err);
+            }
+          }
+        }
+
         // Get local user
         const users = await db.user.toArray();
         const user = users[0];
 
         if (user) {
-          // Sign in to Firebase silently (we need the firebase user for sync)
-          // The auth state listener in initAuth will handle setting the state
           const { useAuthStore } = await import('@/store/authStoreFirebase');
-          const store = useAuthStore.getState();
 
-          // Start Firebase sync if we have a Firebase user
-          if (store.firebaseUser) {
-            FirebaseSync.startSync(store.firebaseUser.uid);
+          // Start Firebase sync
+          if (auth.currentUser) {
+            FirebaseSync.startSync(auth.currentUser.uid);
           }
 
           // Set authenticated state
           useAuthStore.setState({
             user,
+            firebaseUser: auth.currentUser,
             isAuthenticated: true,
             isLocked: false
           });
@@ -106,7 +122,7 @@ export function LoginPage() {
     try {
       const encryptionKey = CryptoService.getEncryptionKey();
       const users = await db.user.toArray();
-      const success = await BiometricAuth.register(encryptionKey, users[0]?.id || 'default');
+      const success = await BiometricAuth.register(encryptionKey, users[0]?.id || 'default', email, masterPassword);
 
       if (success) {
         setBiometricEnabled(true);

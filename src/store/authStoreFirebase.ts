@@ -132,8 +132,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       updatedAt: Date.now()
     });
 
-    // Store encryption key in memory
+    // Store encryption key and credentials in memory
     CryptoService.setEncryptionKey(encryptionKey);
+    CryptoService.setCredentials(email, masterPassword);
 
     // Get user
     const user = await db.user.get(userId);
@@ -228,6 +229,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Store encryption key in memory
       CryptoService.setEncryptionKey(encryptionKey);
     }
+
+    // Store credentials for re-authentication
+    CryptoService.setCredentials(email, masterPassword);
 
     // Start Firebase sync
     FirebaseSync.startSync(userCredential.user.uid);

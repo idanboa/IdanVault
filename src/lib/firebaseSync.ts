@@ -8,7 +8,9 @@ import {
   where,
   getDoc
 } from 'firebase/firestore';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { firestore, auth } from './firebase';
+import { CryptoService } from './crypto';
 import { db, Entry } from './db';
 
 export class FirebaseSync {
@@ -16,12 +18,26 @@ export class FirebaseSync {
   private static syncingUserId: string | null = null;
 
   /**
-   * Get the current Firebase user ID
+   * Get the current Firebase user ID, re-authenticating if needed
    */
-  private static getUid(): string {
-    const uid = auth.currentUser?.uid;
-    if (!uid) throw new Error('Not authenticated with Firebase');
-    return uid;
+  private static async ensureAuth(): Promise<string> {
+    // If already authenticated, return uid
+    if (auth.currentUser?.uid) {
+      return auth.currentUser.uid;
+    }
+
+    // Try to re-authenticate with stored credentials
+    const credentials = CryptoService.getCredentials();
+    if (credentials) {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        credentials.email,
+        credentials.password
+      );
+      return userCredential.user.uid;
+    }
+
+    throw new Error('Not authenticated with Firebase');
   }
 
   /**
@@ -97,10 +113,10 @@ export class FirebaseSync {
   }
 
   /**
-   * Upload entry to Firebase (gets userId directly from Firebase Auth)
+   * Upload entry to Firebase
    */
   static async uploadEntry(entry: Entry) {
-    const uid = this.getUid();
+    const uid = await this.ensureAuth();
 
     const entryRef = doc(firestore, 'entries', entry.id);
     await setDoc(entryRef, {
@@ -117,10 +133,10 @@ export class FirebaseSync {
   }
 
   /**
-   * Delete entry from Firebase (gets userId directly from Firebase Auth)
+   * Delete entry from Firebase
    */
   static async deleteEntry(entryId: string) {
-    this.getUid(); // Verify we're authenticated
+    await this.ensureAuth();
 
     const entryRef = doc(firestore, 'entries', entryId);
     await deleteDoc(entryRef);
@@ -130,7 +146,7 @@ export class FirebaseSync {
    * Upload all local entries to Firebase
    */
   static async uploadAllEntries(userId?: string) {
-    const uid = userId || this.getUid();
+    const uid = userId || await this.ensureAuth();
 
     // Temporarily use the provided uid for getUid calls
     const entries = await db.entries.toArray();
