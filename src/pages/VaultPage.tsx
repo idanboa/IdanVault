@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Entry } from '@/lib/db';
 import { useAuthStore } from '@/store/authStoreFirebase';
 import { useEntries } from '@/hooks/useEntriesFirebase';
+import { useAutoLock } from '@/hooks/useAutoLock';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,8 +25,11 @@ export function VaultPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
-  const { logout } = useAuthStore();
+  const { logout, isLocked } = useAuthStore();
   const { entries, loading, getDecryptedEntry, deleteEntry } = useEntries();
+
+  // Enable auto-lock after 15 minutes of inactivity
+  useAutoLock(true);
 
   useEffect(() => {
     const filtered = entries.filter(entry =>
@@ -33,6 +37,13 @@ export function VaultPage() {
     );
     setFilteredEntries(filtered);
   }, [searchQuery, entries]);
+
+  // Redirect to lock screen when locked
+  useEffect(() => {
+    if (isLocked) {
+      navigate('/lock');
+    }
+  }, [isLocked, navigate]);
 
   const handleSelectEntry = async (entry: Entry) => {
     setSelectedEntry(entry);

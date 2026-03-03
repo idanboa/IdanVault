@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStoreFirebase';
 import { SetupPage } from './pages/SetupPage';
 import { LoginPage } from './pages/LoginPage';
+import { LockScreen } from './pages/LockScreen';
 import { ImportPage } from './pages/ImportPage';
 import { VaultPage } from './pages/VaultPage';
 import { NewEntryPage } from './pages/NewEntryPage';
@@ -50,6 +51,7 @@ function App() {
         <Route path="/" element={getDefaultRoute()} />
         <Route path="/setup" element={<SetupPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/lock" element={<LockScreen />} />
         <Route path="/import" element={<ImportPage />} />
         <Route path="/vault" element={<VaultPage />} />
         <Route path="/new" element={<NewEntryPage />} />

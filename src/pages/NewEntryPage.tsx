@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEntries } from '@/hooks/useEntriesFirebase';
+import { useAutoLock } from '@/hooks/useAutoLock';
+import { useAuthStore } from '@/store/authStoreFirebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -18,6 +20,17 @@ export function NewEntryPage() {
 
   const navigate = useNavigate();
   const { createEntry } = useEntries();
+  const { isLocked } = useAuthStore();
+
+  // Enable auto-lock
+  useAutoLock(true);
+
+  // Redirect to lock screen when locked
+  useEffect(() => {
+    if (isLocked) {
+      navigate('/lock');
+    }
+  }, [isLocked, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
