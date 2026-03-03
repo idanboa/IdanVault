@@ -28,31 +28,48 @@ export class FirebaseSync {
     );
 
     this.unsubscribe = onSnapshot(q, async (snapshot) => {
-      for (const change of snapshot.docChanges()) {
-        const data = change.doc.data();
+      const changes = snapshot.docChanges();
+      if (changes.length === 0) return;
 
-        if (change.type === 'added' || change.type === 'modified') {
-          // Check if entry exists locally
-          const localEntry = await db.entries.get(change.doc.id);
+      // Batch all IndexedDB writes in a single transaction so liveQuery only fires once
+      await db.transaction('rw', db.entries, async () => {
+        const entriesToPut: Entry[] = [];
+        const idsToDelete: string[] = [];
 
-          // Only update if Firestore version is newer
-          if (!localEntry || data.updatedAt > localEntry.updatedAt) {
-            await db.entries.put({
-              id: change.doc.id,
-              vaultId: data.vaultId,
-              category: data.category,
-              title: data.title,
-              encryptedData: data.encryptedData,
-              favorite: data.favorite || false,
-              createdAt: data.createdAt,
-              updatedAt: data.updatedAt,
-              originalCreatedAt: data.originalCreatedAt
-            });
+        for (const change of changes) {
+          const data = change.doc.data();
+
+          if (change.type === 'added' || change.type === 'modified') {
+            // Check if entry exists locally
+            const localEntry = await db.entries.get(change.doc.id);
+
+            // Only update if Firestore version is newer
+            if (!localEntry || data.updatedAt > localEntry.updatedAt) {
+              entriesToPut.push({
+                id: change.doc.id,
+                vaultId: data.vaultId,
+                category: data.category,
+                title: data.title,
+                encryptedData: data.encryptedData,
+                favorite: data.favorite || false,
+                createdAt: data.createdAt,
+                updatedAt: data.updatedAt,
+                originalCreatedAt: data.originalCreatedAt
+              });
+            }
+          } else if (change.type === 'removed') {
+            idsToDelete.push(change.doc.id);
           }
-        } else if (change.type === 'removed') {
-          await db.entries.delete(change.doc.id);
         }
-      }
+
+        if (entriesToPut.length > 0) {
+          await db.entries.bulkPut(entriesToPut);
+        }
+
+        if (idsToDelete.length > 0) {
+          await db.entries.bulkDelete(idsToDelete);
+        }
+      });
     });
   }
 
