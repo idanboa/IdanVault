@@ -26,7 +26,7 @@ export function VaultPage() {
 
   const navigate = useNavigate();
   const { logout, isLocked, isAuthenticated } = useAuthStore();
-  const { entries, loading, getDecryptedEntry, deleteEntry, updateEntry } = useEntries();
+  const { entries, loading, syncError, getDecryptedEntry, deleteEntry, updateEntry } = useEntries();
 
   // Enable auto-lock after 15 minutes of inactivity
   useAutoLock(true);
@@ -131,6 +131,13 @@ export function VaultPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="container mx-auto p-4">
+        {/* Sync error banner */}
+        {syncError && (
+          <div className="bg-red-100 border border-red-300 text-red-800 text-sm p-3 rounded-md mb-4">
+            {syncError}
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>

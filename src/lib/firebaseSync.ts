@@ -8,18 +8,32 @@ import {
   where,
   getDoc
 } from 'firebase/firestore';
-import { firestore } from './firebase';
+import { firestore, auth } from './firebase';
 import { db, Entry } from './db';
 
 export class FirebaseSync {
   private static unsubscribe: (() => void) | null = null;
-  private static userId: string | null = null;
+  private static syncingUserId: string | null = null;
 
   /**
-   * Start syncing with Firebase
+   * Get the current Firebase user ID
+   */
+  private static getUid(): string {
+    const uid = auth.currentUser?.uid;
+    if (!uid) throw new Error('Not authenticated with Firebase');
+    return uid;
+  }
+
+  /**
+   * Start syncing with Firebase (idempotent - safe to call multiple times)
    */
   static async startSync(userId: string) {
-    this.userId = userId;
+    // Don't restart if already syncing for same user
+    if (this.syncingUserId === userId && this.unsubscribe) return;
+
+    // Stop any existing sync first
+    this.stopSync();
+    this.syncingUserId = userId;
 
     // Listen to Firestore changes
     const q = query(
@@ -40,10 +54,8 @@ export class FirebaseSync {
           const data = change.doc.data();
 
           if (change.type === 'added' || change.type === 'modified') {
-            // Check if entry exists locally
             const localEntry = await db.entries.get(change.doc.id);
 
-            // Only update if Firestore version is newer
             if (!localEntry || data.updatedAt > localEntry.updatedAt) {
               entriesToPut.push({
                 id: change.doc.id,
@@ -81,18 +93,18 @@ export class FirebaseSync {
       this.unsubscribe();
       this.unsubscribe = null;
     }
-    this.userId = null;
+    this.syncingUserId = null;
   }
 
   /**
-   * Upload entry to Firebase
+   * Upload entry to Firebase (gets userId directly from Firebase Auth)
    */
   static async uploadEntry(entry: Entry) {
-    if (!this.userId) throw new Error('Not syncing');
+    const uid = this.getUid();
 
     const entryRef = doc(firestore, 'entries', entry.id);
     await setDoc(entryRef, {
-      userId: this.userId,
+      userId: uid,
       vaultId: entry.vaultId,
       category: entry.category,
       title: entry.title,
@@ -105,37 +117,37 @@ export class FirebaseSync {
   }
 
   /**
-   * Delete entry from Firebase
+   * Delete entry from Firebase (gets userId directly from Firebase Auth)
    */
   static async deleteEntry(entryId: string) {
-    if (!this.userId) throw new Error('Not syncing');
+    this.getUid(); // Verify we're authenticated
 
     const entryRef = doc(firestore, 'entries', entryId);
     await deleteDoc(entryRef);
   }
 
   /**
-   * Upload all local entries to Firebase (initial sync)
+   * Upload all local entries to Firebase
    */
   static async uploadAllEntries(userId?: string) {
-    const uid = userId || this.userId;
-    if (!uid) throw new Error('Not syncing');
+    const uid = userId || this.getUid();
 
+    // Temporarily use the provided uid for getUid calls
     const entries = await db.entries.toArray();
 
-    // Temporarily set userId if provided
-    const previousUserId = this.userId;
-    if (userId) this.userId = userId;
-
-    try {
-      for (const entry of entries) {
-        await this.uploadEntry(entry);
-      }
-    } finally {
-      // Restore previous userId
-      if (userId && !previousUserId) {
-        this.userId = previousUserId;
-      }
+    for (const entry of entries) {
+      const entryRef = doc(firestore, 'entries', entry.id);
+      await setDoc(entryRef, {
+        userId: uid,
+        vaultId: entry.vaultId,
+        category: entry.category,
+        title: entry.title,
+        encryptedData: entry.encryptedData,
+        favorite: entry.favorite,
+        createdAt: entry.createdAt,
+        updatedAt: entry.updatedAt,
+        originalCreatedAt: entry.originalCreatedAt || null
+      });
     }
   }
 

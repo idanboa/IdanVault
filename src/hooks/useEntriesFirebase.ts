@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { db, Entry } from '@/lib/db';
 import { CryptoService } from '@/lib/crypto';
 import { FirebaseSync } from '@/lib/firebaseSync';
@@ -6,6 +7,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { v4 as uuid } from 'uuid';
 
 export function useEntries(vaultId?: string) {
+  const [syncError, setSyncError] = useState<string | null>(null);
+
   // Use Dexie's liveQuery for reactive updates (no polling needed)
   const entries = useLiveQuery(
     () => db.entries.orderBy('updatedAt').reverse().toArray(),
@@ -15,10 +18,10 @@ export function useEntries(vaultId?: string) {
 
   const loading = entries === undefined;
 
-  // Ensure Firebase sync is running before any Firebase operation
+  // Ensure Firebase sync is running
   const ensureSync = () => {
     const { firebaseUser } = useAuthStore.getState();
-    if (firebaseUser) {
+    if (firebaseUser && !FirebaseSync['syncingUserId']) {
       FirebaseSync.startSync(firebaseUser.uid);
     }
   };
@@ -60,8 +63,11 @@ export function useEntries(vaultId?: string) {
     try {
       ensureSync();
       await FirebaseSync.uploadEntry(entry);
+      setSyncError(null);
     } catch (err) {
-      console.error('Failed to sync new entry to Firebase:', err);
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Firebase sync failed (create):', msg);
+      setSyncError(`Sync failed: ${msg}`);
     }
 
     return entry;
@@ -81,15 +87,18 @@ export function useEntries(vaultId?: string) {
     // Update locally
     await db.entries.update(id, toUpdate);
 
-    // Get updated entry and sync to Firebase
+    // Sync to Firebase
     try {
       ensureSync();
       const entry = await db.entries.get(id);
       if (entry) {
         await FirebaseSync.uploadEntry(entry);
+        setSyncError(null);
       }
     } catch (err) {
-      console.error('Failed to sync updated entry to Firebase:', err);
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Firebase sync failed (update):', msg);
+      setSyncError(`Sync failed: ${msg}`);
     }
   };
 
@@ -102,14 +111,18 @@ export function useEntries(vaultId?: string) {
     try {
       ensureSync();
       await FirebaseSync.deleteEntry(id);
+      setSyncError(null);
     } catch (err) {
-      console.error('Failed to sync deletion to Firebase:', err);
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Firebase sync failed (delete):', msg);
+      setSyncError(`Sync failed: ${msg}`);
     }
   };
 
   return {
     entries: entries || [],
     loading,
+    syncError,
     getDecryptedEntry,
     createEntry,
     updateEntry,
