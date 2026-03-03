@@ -10,7 +10,6 @@ export function DebugPage() {
   const { firebaseUser, user } = useAuthStore();
 
   const checkStatus = async () => {
-    const localUser = await db.user.toArray();
     const entries = await db.entries.toArray();
 
     const info = `
