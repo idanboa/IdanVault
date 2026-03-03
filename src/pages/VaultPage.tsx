@@ -7,7 +7,7 @@ import { useAutoLock } from '@/hooks/useAutoLock';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Lock, CreditCard, FileText, Server, User, LogOut, Search, Eye, EyeOff, Copy, Plus, Trash2 } from 'lucide-react';
+import { Lock, CreditCard, FileText, Server, User, LogOut, Search, Eye, EyeOff, Copy, Plus, Trash2, Download, Star } from 'lucide-react';
 
 const CATEGORY_ICONS: Record<Entry['category'], any> = {
   LOGIN: Lock,
@@ -26,7 +26,7 @@ export function VaultPage() {
 
   const navigate = useNavigate();
   const { logout, isLocked } = useAuthStore();
-  const { entries, loading, getDecryptedEntry, deleteEntry } = useEntries();
+  const { entries, loading, getDecryptedEntry, deleteEntry, updateEntry } = useEntries();
 
   // Enable auto-lock after 15 minutes of inactivity
   useAutoLock(true);
@@ -74,6 +74,36 @@ export function VaultPage() {
     }
   };
 
+  const handleExport = () => {
+    // Export all entries as encrypted JSON backup
+    const exportData = {
+      version: '1.0',
+      exportDate: new Date().toISOString(),
+      entries: entries,
+      entryCount: entries.length
+    };
+
+    const json = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `idanvault-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!selectedEntry) return;
+
+    await updateEntry(selectedEntry.id, { favorite: !selectedEntry.favorite });
+
+    // Update local state
+    setSelectedEntry({ ...selectedEntry, favorite: !selectedEntry.favorite });
+  };
+
   const getFieldValue = (field: any) => {
     if (field.type === 'CONCEALED' && field.purpose === 'PASSWORD') {
       return (
@@ -104,6 +134,10 @@ export function VaultPage() {
             <Button onClick={() => navigate('/new')} variant="outline">
               <Plus className="mr-2 h-4 w-4" />
               New
+            </Button>
+            <Button onClick={handleExport} variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              Export
             </Button>
             <Button onClick={handleLogout} variant="outline">
               <LogOut className="mr-2 h-4 w-4" />
@@ -147,7 +181,12 @@ export function VaultPage() {
                         <div className="flex items-start gap-3">
                           <Icon className="h-5 w-5 mt-0.5 text-muted-foreground" />
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-medium truncate">{entry.title}</h3>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium truncate">{entry.title}</h3>
+                              {entry.favorite && (
+                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 flex-shrink-0" />
+                              )}
+                            </div>
                             <p className="text-xs text-muted-foreground">{entry.category}</p>
                           </div>
                         </div>
@@ -169,9 +208,20 @@ export function VaultPage() {
                       <CardTitle>{selectedEntry.title}</CardTitle>
                       <CardDescription>{selectedEntry.category}</CardDescription>
                     </div>
-                    <Button onClick={handleDelete} variant="destructive" size="sm">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleToggleFavorite}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Star
+                          className={`h-4 w-4 ${selectedEntry.favorite ? 'fill-yellow-400 text-yellow-400' : ''}`}
+                        />
+                      </Button>
+                      <Button onClick={handleDelete} variant="destructive" size="sm">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
