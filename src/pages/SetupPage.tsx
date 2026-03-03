@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStoreFirebase';
+import { db } from '@/lib/db';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -33,7 +34,20 @@ export function SetupPage() {
     setLoading(true);
     try {
       await setup(email, masterPassword);
-      navigate('/import');
+
+      // Wait a moment for Firebase sync to pull down entries
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Check if entries were synced down from Firestore
+      const entries = await db.entries.toArray();
+
+      if (entries.length > 0) {
+        // Existing account with data - go to vault
+        navigate('/vault');
+      } else {
+        // New account - go to import
+        navigate('/import');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Setup failed');
     } finally {
@@ -47,7 +61,7 @@ export function SetupPage() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Welcome to IdanVault</CardTitle>
           <CardDescription className="text-center">
-            Create your master password to secure your vault
+            Enter your email and master password to set up this device
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -98,11 +112,11 @@ export function SetupPage() {
             )}
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Setting up...' : 'Create Vault'}
+              {loading ? 'Setting up...' : 'Continue'}
             </Button>
 
             <p className="text-xs text-muted-foreground text-center mt-4">
-              Your master password is never stored. Make sure you remember it!
+              If you have an account, your vault will sync to this device automatically.
             </p>
           </form>
         </CardContent>
