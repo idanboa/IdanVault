@@ -6,7 +6,7 @@ import { useEntries } from '@/hooks/useEntriesFirebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Lock, CreditCard, FileText, Server, User, LogOut, Search, Eye, EyeOff, Copy, Plus, Trash2, Edit } from 'lucide-react';
+import { Lock, CreditCard, FileText, Server, User, LogOut, Search, Eye, EyeOff, Copy, Plus, Trash2 } from 'lucide-react';
 
 const CATEGORY_ICONS: Record<Entry['category'], any> = {
   LOGIN: Lock,
