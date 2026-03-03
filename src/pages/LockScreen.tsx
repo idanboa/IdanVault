@@ -1,19 +1,61 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStoreFirebase';
+import { BiometricAuth } from '@/lib/biometric';
+import { CryptoService } from '@/lib/crypto';
+import { FirebaseSync } from '@/lib/firebaseSync';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Lock } from 'lucide-react';
+import { Lock, Fingerprint } from 'lucide-react';
 
 export function LockScreen() {
   const [masterPassword, setMasterPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
 
   const navigate = useNavigate();
-  const { unlock, user } = useAuthStore();
+  const { unlock, user, firebaseUser } = useAuthStore();
+
+  useEffect(() => {
+    setBiometricEnabled(BiometricAuth.isEnabled());
+
+    // Auto-trigger biometric if enabled
+    if (BiometricAuth.isEnabled()) {
+      handleBiometricUnlock();
+    }
+  }, []);
+
+  const handleBiometricUnlock = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const encryptionKey = await BiometricAuth.authenticate();
+      if (encryptionKey) {
+        // Set encryption key directly
+        CryptoService.setEncryptionKey(encryptionKey);
+
+        // Restart Firebase sync
+        if (firebaseUser) {
+          FirebaseSync.startSync(firebaseUser.uid);
+        }
+
+        // Set authenticated state
+        useAuthStore.setState({
+          isAuthenticated: true,
+          isLocked: false
+        });
+
+        navigate('/vault');
+      }
+    } catch (err) {
+      console.error('Biometric unlock failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +93,30 @@ export function LockScreen() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {biometricEnabled && (
+              <>
+                <Button
+                  type="button"
+                  onClick={handleBiometricUnlock}
+                  variant="outline"
+                  className="w-full h-16 text-lg"
+                  disabled={loading}
+                >
+                  <Fingerprint className="mr-3 h-6 w-6" />
+                  Unlock with Face / Touch ID
+                </Button>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-muted-foreground">or use password</span>
+                  </div>
+                </div>
+              </>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="password">Master Password</Label>
               <Input
@@ -60,7 +126,7 @@ export function LockScreen() {
                 value={masterPassword}
                 onChange={(e) => setMasterPassword(e.target.value)}
                 required
-                autoFocus
+                autoFocus={!biometricEnabled}
                 autoComplete="current-password"
               />
             </div>
