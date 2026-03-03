@@ -65,7 +65,7 @@ export function ImportPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
       <Card className="w-full max-w-lg">
         <CardHeader>
           <CardTitle>Import from 1Password</CardTitle>
@@ -117,7 +117,7 @@ export function ImportPage() {
             </>
           ) : (
             <div className="space-y-4">
-              <div className={`p-4 rounded-lg ${result.success ? 'bg-green-900/30 border border-green-800 text-green-300' : 'bg-red-900/30 border border-red-800 text-red-300'}`}>
+              <div className={`p-4 rounded-lg ${result.success ? 'bg-green-50 text-green-900' : 'bg-red-50 text-red-900'}`}>
                 <h3 className="font-semibold mb-2">
                   {result.success ? 'Import Successful!' : 'Import Completed with Errors'}
                 </h3>
@@ -129,19 +129,19 @@ export function ImportPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="bg-card border border-border p-3 rounded-md">
+                <div className="bg-slate-100 p-3 rounded-md">
                   <div className="font-medium">Logins</div>
                   <div className="text-2xl font-bold">{result.summary.LOGIN}</div>
                 </div>
-                <div className="bg-card border border-border p-3 rounded-md">
+                <div className="bg-slate-100 p-3 rounded-md">
                   <div className="font-medium">Secure Notes</div>
                   <div className="text-2xl font-bold">{result.summary.SECURE_NOTE}</div>
                 </div>
-                <div className="bg-card border border-border p-3 rounded-md">
+                <div className="bg-slate-100 p-3 rounded-md">
                   <div className="font-medium">Credit Cards</div>
                   <div className="text-2xl font-bold">{result.summary.CREDIT_CARD}</div>
                 </div>
-                <div className="bg-card border border-border p-3 rounded-md">
+                <div className="bg-slate-100 p-3 rounded-md">
                   <div className="font-medium">Other</div>
                   <div className="text-2xl font-bold">
                     {result.summary.SERVER + result.summary.IDENTITY}
@@ -150,9 +150,9 @@ export function ImportPage() {
               </div>
 
               {result.errors.length > 0 && (
-                <div className="bg-red-900/30 border border-red-800 p-3 rounded-md">
-                  <h4 className="font-medium text-red-300 mb-2">Errors:</h4>
-                  <ul className="text-sm text-red-400 space-y-1">
+                <div className="bg-red-50 p-3 rounded-md">
+                  <h4 className="font-medium text-red-900 mb-2">Errors:</h4>
+                  <ul className="text-sm text-red-800 space-y-1">
                     {result.errors.slice(0, 5).map((err, i) => (
                       <li key={i}>{err.item}: {err.error}</li>
                     ))}
