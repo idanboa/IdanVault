@@ -34,9 +34,33 @@ Local DB Users: ${users.length}
         return;
       }
 
-      setStatus('Syncing to Firebase...');
+      if (!authStore.user) {
+        setStatus('❌ Error: No local user found.');
+        return;
+      }
+
+      setStatus('Syncing to Firebase...\n\n1. Saving user data (salt)...');
+
+      // Save user data to Firestore (salt and hash)
+      await FirebaseSync.saveUserData(
+        authStore.firebaseUser.uid,
+        authStore.user.email,
+        authStore.user.salt,
+        authStore.user.masterPasswordHash
+      );
+
+      setStatus('Syncing to Firebase...\n\n1. ✅ User data saved\n2. Starting sync...');
+
+      // Start sync
+      FirebaseSync.startSync(authStore.firebaseUser.uid);
+
+      setStatus('Syncing to Firebase...\n\n1. ✅ User data saved\n2. ✅ Sync started\n3. Uploading entries...');
+
+      // Upload all entries
       await FirebaseSync.uploadAllEntries();
-      setStatus('✅ Sync complete! Check your Firebase console:\nhttps://console.firebase.google.com/project/idanvaultproduction/firestore/databases/-default-/data');
+
+      const entries = await db.entries.toArray();
+      setStatus(`✅ Sync complete!\n\n- User data (salt) saved to Firestore\n- ${entries.length} entries uploaded to Firestore\n\nYou can now log in from other devices!\n\nFirebase console:\nhttps://console.firebase.google.com/project/idanvaultproduction/firestore/databases/-default-/data`);
     } catch (err) {
       setStatus(`❌ Sync error: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
