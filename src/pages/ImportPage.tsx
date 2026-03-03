@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ImportService, ImportResult } from '@/lib/import';
 import { db } from '@/lib/db';
+import { FirebaseSync } from '@/lib/firebaseSync';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +37,9 @@ export function ImportPage() {
       setResult(importResult);
 
       if (importResult.success) {
+        // Upload all entries to Firebase
+        await FirebaseSync.uploadAllEntries();
+
         // Navigate to vault after a delay
         setTimeout(() => {
           navigate('/vault');

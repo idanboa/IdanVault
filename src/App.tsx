@@ -1,19 +1,20 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuthStore } from './store/authStore';
+import { useAuthStore } from './store/authStoreFirebase';
 import { SetupPage } from './pages/SetupPage';
 import { ImportPage } from './pages/ImportPage';
 import { VaultPage } from './pages/VaultPage';
 
 function App() {
   const [isSetupComplete, setIsSetupComplete] = useState<boolean | null>(null);
-  const { checkSetup } = useAuthStore();
+  const { checkSetup, initAuth, isLoading } = useAuthStore();
 
   useEffect(() => {
+    initAuth();
     checkSetup().then(setIsSetupComplete);
   }, []);
 
-  if (isSetupComplete === null) {
+  if (isLoading || isSetupComplete === null) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

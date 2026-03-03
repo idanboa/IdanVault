@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db, Entry } from '@/lib/db';
+import { Entry } from '@/lib/db';
 import { CryptoService } from '@/lib/crypto';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '@/store/authStoreFirebase';
+import { useEntries } from '@/hooks/useEntriesFirebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,20 +18,15 @@ const CATEGORY_ICONS: Record<Entry['category'], any> = {
 };
 
 export function VaultPage() {
-  const [entries, setEntries] = useState<Entry[]>([]);
   const [filteredEntries, setFilteredEntries] = useState<Entry[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [decryptedData, setDecryptedData] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
   const { logout } = useAuthStore();
-
-  useEffect(() => {
-    loadEntries();
-  }, []);
+  const { entries, loading, getDecryptedEntry } = useEntries();
 
   useEffect(() => {
     const filtered = entries.filter(entry =>
@@ -39,23 +35,11 @@ export function VaultPage() {
     setFilteredEntries(filtered);
   }, [searchQuery, entries]);
 
-  const loadEntries = async () => {
-    try {
-      const allEntries = await db.entries.reverse().sortBy('updatedAt');
-      setEntries(allEntries);
-      setFilteredEntries(allEntries);
-    } catch (err) {
-      console.error('Failed to load entries:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSelectEntry = async (entry: Entry) => {
     setSelectedEntry(entry);
     try {
-      const data = CryptoService.decrypt(entry.encryptedData);
-      setDecryptedData(data);
+      const decrypted = await getDecryptedEntry(entry.id);
+      setDecryptedData(decrypted.data);
     } catch (err) {
       console.error('Failed to decrypt entry:', err);
     }
@@ -65,8 +49,8 @@ export function VaultPage() {
     navigator.clipboard.writeText(text);
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/setup');
   };
 
