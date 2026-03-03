@@ -6,53 +6,65 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 export function DebugPage() {
-  const [status, setStatus] = useState<string>('');
-  const { firebaseUser, user } = useAuthStore();
+  const [status, setStatus] = useState<string>('Ready. Click "Check Status" to begin.');
+  const authStore = useAuthStore();
 
   const checkStatus = async () => {
-    const entries = await db.entries.toArray();
+    try {
+      const entries = await db.entries.toArray();
+      const users = await db.user.toArray();
 
-    const info = `
-Firebase User: ${firebaseUser ? firebaseUser.email : 'Not logged in'}
-Local User: ${user ? user.email : 'None'}
+      const info = `
+Firebase User: ${authStore.firebaseUser ? authStore.firebaseUser.email : 'Not logged in'}
+Local User: ${authStore.user ? authStore.user.email : 'None'}
 Local Entries: ${entries.length}
-    `;
+Local DB Users: ${users.length}
+      `;
 
-    setStatus(info);
+      setStatus(info);
+    } catch (err) {
+      setStatus(`Error checking status: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
   };
 
   const manualSync = async () => {
     try {
-      if (!firebaseUser) {
-        setStatus('Error: Not logged into Firebase. Please logout and login again.');
+      if (!authStore.firebaseUser) {
+        setStatus('❌ Error: Not logged into Firebase.\n\nYou created your account before we added Firebase.\n\nSolution: Click "Clear Local Data" below, then reload and create a new account.');
         return;
       }
 
       setStatus('Syncing to Firebase...');
       await FirebaseSync.uploadAllEntries();
-      setStatus('✅ Sync complete! Check Firebase console.');
+      setStatus('✅ Sync complete! Check your Firebase console:\nhttps://console.firebase.google.com/project/idanvaultproduction/firestore/databases/-default-/data');
     } catch (err) {
-      setStatus(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setStatus(`❌ Sync error: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 
   const clearLocalData = async () => {
-    if (!confirm('This will delete ALL local data. Continue?')) return;
+    try {
+      const confirmed = window.confirm('⚠️ This will delete ALL local data.\n\nYou will need to:\n1. Reload the page\n2. Create a new account\n3. Import your 1Password data again\n\nContinue?');
 
-    await db.entries.clear();
-    await db.vaults.clear();
-    await db.user.clear();
-    await db.tags.clear();
-    await db.entryTags.clear();
+      if (!confirmed) return;
 
-    setStatus('✅ Local data cleared. Reload the page.');
+      await db.entries.clear();
+      await db.vaults.clear();
+      await db.user.clear();
+      await db.tags.clear();
+      await db.entryTags.clear();
+
+      setStatus('✅ Local data cleared!\n\nNow:\n1. Reload the page (CMD+R or F5)\n2. Create a new account\n3. Import your data');
+    } catch (err) {
+      setStatus(`Error clearing data: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-      <Card className="max-w-2xl mx-auto">
+      <Card className="max-w-2xl mx-auto mt-8">
         <CardHeader>
-          <CardTitle>Debug & Sync Tools</CardTitle>
+          <CardTitle>🔧 Debug & Sync Tools</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -69,25 +81,32 @@ Local Entries: ${entries.length}
             </Button>
           </div>
 
-          {status && (
-            <pre className="bg-slate-100 p-4 rounded-md text-sm whitespace-pre-wrap">
+          <div className="bg-slate-100 p-4 rounded-md">
+            <pre className="text-sm whitespace-pre-wrap font-mono">
               {status}
             </pre>
-          )}
+          </div>
 
-          <div className="text-sm text-muted-foreground">
-            <p className="font-semibold mb-2">Instructions:</p>
-            <ol className="list-decimal list-inside space-y-1">
-              <li>Click "Check Status" to see if you're logged into Firebase</li>
-              <li>If Firebase User shows "Not logged in":
-                <ul className="list-disc list-inside ml-4 mt-1">
-                  <li>Click "Clear Local Data"</li>
+          <div className="text-sm text-muted-foreground border-t pt-4">
+            <p className="font-semibold mb-2">📖 How to Fix Firebase Sync:</p>
+            <ol className="list-decimal list-inside space-y-2">
+              <li><strong>Check Status</strong> - See if you're logged into Firebase</li>
+              <li><strong>If "Firebase User: Not logged in":</strong>
+                <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                  <li>This means you created your account BEFORE we added Firebase</li>
+                  <li>Click "Clear Local Data" button</li>
                   <li>Reload the page</li>
-                  <li>Create a NEW account with Firebase</li>
+                  <li>Create a NEW account (this time with Firebase!)</li>
                   <li>Import your 1Password data again</li>
+                  <li>✅ Now it will sync across all devices!</li>
                 </ul>
               </li>
-              <li>If Firebase User shows your email, click "Manual Sync to Firebase"</li>
+              <li><strong>If "Firebase User: your@email.com":</strong>
+                <ul className="list-disc list-inside ml-4 mt-1">
+                  <li>You're already logged into Firebase! ✅</li>
+                  <li>Click "Manual Sync to Firebase" to upload your data</li>
+                </ul>
+              </li>
             </ol>
           </div>
         </CardContent>
