@@ -37,53 +37,60 @@ export function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      const encryptionKey = await BiometricAuth.authenticate();
-      if (encryptionKey) {
-        // Set encryption key directly
-        CryptoService.setEncryptionKey(encryptionKey);
-
+      const biometricKey = await BiometricAuth.authenticate();
+      if (biometricKey) {
         // Restore stored credentials for Firebase re-authentication
         const storedCreds = BiometricAuth.getStoredCredentials();
         const { auth } = await import('@/lib/firebase');
-
-        if (storedCreds) {
-          CryptoService.setCredentials(storedCreds.email, storedCreds.password);
-
-          // Sign in to Firebase
-          if (!auth.currentUser) {
-            try {
-              const { signInWithEmailAndPassword } = await import('firebase/auth');
-              await signInWithEmailAndPassword(auth, storedCreds.email, storedCreds.password);
-            } catch (err) {
-              console.error('Firebase re-auth failed:', err);
-            }
-          }
-        }
 
         // Get local user
         const users = await db.user.toArray();
         const user = users[0];
 
-        if (user) {
-          const { useAuthStore } = await import('@/store/authStoreFirebase');
-
-          // Start Firebase sync
-          if (auth.currentUser) {
-            FirebaseSync.startSync(auth.currentUser.uid);
-          }
-
-          // Set authenticated state
-          useAuthStore.setState({
-            user,
-            firebaseUser: auth.currentUser,
-            isAuthenticated: true,
-            isLocked: false
-          });
-
-          navigate('/vault');
-        } else {
+        if (!user || !storedCreds) {
           setError('No local user found. Please login with your password.');
+          return;
         }
+
+        // Derive the encryption key from stored credentials + local salt
+        // instead of trusting the raw stored key
+        const { encryptionKey } = await CryptoService.deriveMasterKey(
+          storedCreds.password,
+          storedCreds.email,
+          user.salt
+        );
+        CryptoService.setEncryptionKey(encryptionKey);
+        CryptoService.setCredentials(storedCreds.email, storedCreds.password);
+
+        // Update the biometric stored key to stay in sync
+        BiometricAuth.updateStoredKey(encryptionKey, storedCreds.email, storedCreds.password);
+
+        // Sign in to Firebase
+        if (!auth.currentUser) {
+          try {
+            const { signInWithEmailAndPassword } = await import('firebase/auth');
+            await signInWithEmailAndPassword(auth, storedCreds.email, storedCreds.password);
+          } catch (err) {
+            console.error('Firebase re-auth failed:', err);
+          }
+        }
+
+        const { useAuthStore } = await import('@/store/authStoreFirebase');
+
+        // Start Firebase sync
+        if (auth.currentUser) {
+          FirebaseSync.startSync(auth.currentUser.uid);
+        }
+
+        // Set authenticated state
+        useAuthStore.setState({
+          user,
+          firebaseUser: auth.currentUser,
+          isAuthenticated: true,
+          isLocked: false
+        });
+
+        navigate('/vault');
       }
     } catch (err) {
       console.error('Biometric login failed:', err);

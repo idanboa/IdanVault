@@ -32,26 +32,37 @@ export function LockScreen() {
     setLoading(true);
     setError('');
     try {
-      const encryptionKey = await BiometricAuth.authenticate();
-      if (encryptionKey) {
-        // Set encryption key directly
-        CryptoService.setEncryptionKey(encryptionKey);
-
+      const biometricKey = await BiometricAuth.authenticate();
+      if (biometricKey) {
         // Restore stored credentials for Firebase re-authentication
         const storedCreds = BiometricAuth.getStoredCredentials();
         const { auth } = await import('@/lib/firebase');
 
-        if (storedCreds) {
-          CryptoService.setCredentials(storedCreds.email, storedCreds.password);
+        if (!user || !storedCreds) {
+          setError('Missing credentials. Please unlock with your password.');
+          return;
+        }
 
-          // Re-authenticate with Firebase if needed
-          if (!auth.currentUser) {
-            try {
-              const { signInWithEmailAndPassword } = await import('firebase/auth');
-              await signInWithEmailAndPassword(auth, storedCreds.email, storedCreds.password);
-            } catch (err) {
-              console.error('Firebase re-auth failed:', err);
-            }
+        // Derive the encryption key from stored credentials + local salt
+        // instead of trusting the raw stored key
+        const { encryptionKey } = await CryptoService.deriveMasterKey(
+          storedCreds.password,
+          storedCreds.email,
+          user.salt
+        );
+        CryptoService.setEncryptionKey(encryptionKey);
+        CryptoService.setCredentials(storedCreds.email, storedCreds.password);
+
+        // Update the biometric stored key to stay in sync
+        BiometricAuth.updateStoredKey(encryptionKey, storedCreds.email, storedCreds.password);
+
+        // Re-authenticate with Firebase if needed
+        if (!auth.currentUser) {
+          try {
+            const { signInWithEmailAndPassword } = await import('firebase/auth');
+            await signInWithEmailAndPassword(auth, storedCreds.email, storedCreds.password);
+          } catch (err) {
+            console.error('Firebase re-auth failed:', err);
           }
         }
 
