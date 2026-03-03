@@ -1,38 +1,18 @@
-import { useState, useEffect } from 'react';
 import { db, Entry } from '@/lib/db';
 import { CryptoService } from '@/lib/crypto';
 import { FirebaseSync } from '@/lib/firebaseSync';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { v4 as uuid } from 'uuid';
 
 export function useEntries(vaultId?: string) {
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Use Dexie's liveQuery for reactive updates (no polling needed)
+  const entries = useLiveQuery(
+    () => db.entries.orderBy('updatedAt').reverse().toArray(),
+    [],
+    []
+  );
 
-  // Load entries
-  const loadEntries = async () => {
-    setLoading(true);
-    try {
-      const query = vaultId
-        ? db.entries.where('vaultId').equals(vaultId)
-        : db.entries.toCollection();
-
-      const items = await query.reverse().sortBy('updatedAt');
-      setEntries(items);
-    } catch (error) {
-      console.error('Failed to load entries:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadEntries();
-
-    // Set up listener for IndexedDB changes (from Firebase sync)
-    const interval = setInterval(loadEntries, 2000); // Reload every 2 seconds to catch synced changes
-
-    return () => clearInterval(interval);
-  }, [vaultId]);
+  const loading = entries === undefined;
 
   // Get decrypted entry
   const getDecryptedEntry = async (id: string) => {
@@ -70,7 +50,6 @@ export function useEntries(vaultId?: string) {
     // Sync to Firebase
     await FirebaseSync.uploadEntry(entry);
 
-    await loadEntries();
     return entry;
   };
 
@@ -93,8 +72,6 @@ export function useEntries(vaultId?: string) {
     if (entry) {
       await FirebaseSync.uploadEntry(entry);
     }
-
-    await loadEntries();
   };
 
   // Delete entry
@@ -104,14 +81,11 @@ export function useEntries(vaultId?: string) {
 
     // Delete from Firebase
     await FirebaseSync.deleteEntry(id);
-
-    await loadEntries();
   };
 
   return {
-    entries,
+    entries: entries || [],
     loading,
-    loadEntries,
     getDecryptedEntry,
     createEntry,
     updateEntry,
