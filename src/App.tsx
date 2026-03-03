@@ -4,6 +4,7 @@ import { useAuthStore } from './store/authStoreFirebase';
 import { SetupPage } from './pages/SetupPage';
 import { ImportPage } from './pages/ImportPage';
 import { VaultPage } from './pages/VaultPage';
+import { DebugPage } from './pages/DebugPage';
 
 function App() {
   const [isSetupComplete, setIsSetupComplete] = useState<boolean | null>(null);
@@ -41,6 +42,7 @@ function App() {
         <Route path="/setup" element={<SetupPage />} />
         <Route path="/import" element={<ImportPage />} />
         <Route path="/vault" element={<VaultPage />} />
+        <Route path="/debug" element={<DebugPage />} />
       </Routes>
     </HashRouter>
   );
