@@ -41,7 +41,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // User is signed in, get local user data
         const localUser = await db.user.where('email').equals(firebaseUser.email!).first();
         if (localUser) {
-          set({ firebaseUser, user: localUser, isLoading: false });
+          // Start Firebase sync automatically on auth restore
+          FirebaseSync.startSync(firebaseUser.uid);
+          set({ firebaseUser, user: localUser, isAuthenticated: CryptoService.isAuthenticated(), isLoading: false });
         } else {
           set({ firebaseUser: null, user: null, isAuthenticated: false, isLoading: false });
         }
@@ -279,8 +281,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return false;
     }
 
-    // Store encryption key in memory
+    // Store encryption key and credentials in memory
     CryptoService.setEncryptionKey(encryptionKey);
+    CryptoService.setCredentials(user.email, masterPassword);
 
     // Restart Firebase sync
     FirebaseSync.startSync(firebaseUser.uid);
