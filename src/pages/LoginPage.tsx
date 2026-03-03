@@ -142,12 +142,12 @@ export function LoginPage() {
   // Show biometric enrollment prompt
   if (showEnrollPrompt) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1 text-center">
             <div className="flex justify-center mb-4">
-              <div className="rounded-full bg-slate-100 p-4">
-                <Fingerprint className="h-8 w-8 text-slate-600" />
+              <div className="rounded-full bg-blue-600/15 p-4">
+                <Fingerprint className="h-8 w-8 text-blue-400" />
               </div>
             </div>
             <CardTitle className="text-2xl font-bold">Enable Biometric Unlock?</CardTitle>
@@ -169,7 +169,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle>
@@ -198,7 +198,7 @@ export function LoginPage() {
                   <span className="w-full border-t" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-muted-foreground">or use password</span>
+                  <span className="bg-card px-2 text-muted-foreground">or use password</span>
                 </div>
               </div>
             )}
@@ -230,7 +230,7 @@ export function LoginPage() {
             </div>
 
             {error && (
-              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
+              <div className="text-sm text-red-300 bg-red-900/30 border border-red-800 p-3 rounded-md">
                 {error}
               </div>
             )}

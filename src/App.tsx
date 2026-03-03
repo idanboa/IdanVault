@@ -7,6 +7,7 @@ import { LockScreen } from './pages/LockScreen';
 import { ImportPage } from './pages/ImportPage';
 import { VaultPage } from './pages/VaultPage';
 import { NewEntryPage } from './pages/NewEntryPage';
+import { EntryDetailPage } from './pages/EntryDetailPage';
 import { DebugPage } from './pages/DebugPage';
 
 function App() {
@@ -65,6 +66,7 @@ function App() {
         <Route path="/import" element={<ImportPage />} />
         <Route path="/vault" element={<VaultPage />} />
         <Route path="/new" element={<NewEntryPage />} />
+        <Route path="/entry/:id" element={<EntryDetailPage />} />
         <Route path="/debug" element={<DebugPage />} />
       </Routes>
     </HashRouter>

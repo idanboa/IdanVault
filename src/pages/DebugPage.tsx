@@ -85,7 +85,7 @@ Local DB Users: ${users.length}
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+    <div className="min-h-screen bg-background p-4">
       <Card className="max-w-2xl mx-auto mt-8">
         <CardHeader>
           <CardTitle>🔧 Debug & Sync Tools</CardTitle>
@@ -105,7 +105,7 @@ Local DB Users: ${users.length}
             </Button>
           </div>
 
-          <div className="bg-slate-100 p-4 rounded-md">
+          <div className="bg-card border border-border p-4 rounded-md">
             <pre className="text-sm whitespace-pre-wrap font-mono">
               {status}
             </pre>

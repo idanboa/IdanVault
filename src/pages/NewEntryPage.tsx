@@ -88,7 +88,7 @@ export function NewEntryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+    <div className="min-h-screen bg-background p-4">
       <div className="container mx-auto max-w-2xl">
         <Button
           onClick={() => navigate('/vault')}
@@ -156,7 +156,7 @@ export function NewEntryPage() {
                 <Label htmlFor="notes">Notes</Label>
                 <textarea
                   id="notes"
-                  className="w-full min-h-[100px] px-3 py-2 text-sm border rounded-md"
+                  className="w-full min-h-[100px] px-3 py-2 text-sm border border-border bg-input text-foreground rounded-md placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/25 transition-all"
                   placeholder="Additional notes..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
@@ -164,7 +164,7 @@ export function NewEntryPage() {
               </div>
 
               {error && (
-                <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
+                <div className="text-sm text-red-300 bg-red-900/30 border border-red-800 p-3 rounded-md">
                   {error}
                 </div>
               )}
