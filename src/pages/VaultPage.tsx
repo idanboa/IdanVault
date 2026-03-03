@@ -188,7 +188,7 @@ export function VaultPage() {
                   return (
                     <Card
                       key={entry.id}
-                      className={`cursor-pointer transition-colors hover:bg-accent ${selectedEntry?.id === entry.id ? 'bg-accent' : ''}`}
+                      className={`cursor-pointer transition-all duration-150 hover:bg-accent active:scale-[0.98] ${selectedEntry?.id === entry.id ? 'bg-accent' : ''}`}
                       onClick={() => handleSelectEntry(entry)}
                     >
                       <CardContent className="p-4">
