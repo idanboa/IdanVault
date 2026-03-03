@@ -59,8 +59,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       throw new Error('Setup already completed');
     }
 
-    // Create Firebase user
-    const userCredential = await createUserWithEmailAndPassword(auth, email, masterPassword);
+    // Try to create Firebase user, or sign in if already exists
+    let userCredential;
+    try {
+      userCredential = await createUserWithEmailAndPassword(auth, email, masterPassword);
+    } catch (error: any) {
+      // If email already in use, sign in instead
+      if (error.code === 'auth/email-already-in-use') {
+        userCredential = await signInWithEmailAndPassword(auth, email, masterPassword);
+      } else {
+        throw error;
+      }
+    }
 
     // Derive encryption key and hash
     const { encryptionKey, salt, hash } = await CryptoService.deriveMasterKey(
