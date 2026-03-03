@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStoreFirebase';
 import { SetupPage } from './pages/SetupPage';
 import { ImportPage } from './pages/ImportPage';
@@ -26,7 +26,7 @@ function App() {
   }
 
   return (
-    <BrowserRouter basename="/IdanVault">
+    <HashRouter>
       <Routes>
         <Route
           path="/"
@@ -42,7 +42,7 @@ function App() {
         <Route path="/import" element={<ImportPage />} />
         <Route path="/vault" element={<VaultPage />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
