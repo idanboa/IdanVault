@@ -100,13 +100,25 @@ export class FirebaseSync {
   /**
    * Upload all local entries to Firebase (initial sync)
    */
-  static async uploadAllEntries() {
-    if (!this.userId) throw new Error('Not syncing');
+  static async uploadAllEntries(userId?: string) {
+    const uid = userId || this.userId;
+    if (!uid) throw new Error('Not syncing');
 
     const entries = await db.entries.toArray();
 
-    for (const entry of entries) {
-      await this.uploadEntry(entry);
+    // Temporarily set userId if provided
+    const previousUserId = this.userId;
+    if (userId) this.userId = userId;
+
+    try {
+      for (const entry of entries) {
+        await this.uploadEntry(entry);
+      }
+    } finally {
+      // Restore previous userId
+      if (userId && !previousUserId) {
+        this.userId = previousUserId;
+      }
     }
   }
 

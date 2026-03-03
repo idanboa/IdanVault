@@ -49,18 +49,18 @@ Local DB Users: ${users.length}
         authStore.user.masterPasswordHash
       );
 
-      setStatus('Syncing to Firebase...\n\n1. ✅ User data saved\n2. Starting sync...');
+      setStatus('Syncing to Firebase...\n\n1. ✅ User data saved\n2. Uploading entries...');
 
-      // Start sync
-      FirebaseSync.startSync(authStore.firebaseUser.uid);
+      // Upload all entries (pass userId directly)
+      await FirebaseSync.uploadAllEntries(authStore.firebaseUser.uid);
 
-      setStatus('Syncing to Firebase...\n\n1. ✅ User data saved\n2. ✅ Sync started\n3. Uploading entries...');
+      setStatus('Syncing to Firebase...\n\n1. ✅ User data saved\n2. ✅ Entries uploaded\n3. Starting real-time sync...');
 
-      // Upload all entries
-      await FirebaseSync.uploadAllEntries();
+      // Start real-time sync listener
+      await FirebaseSync.startSync(authStore.firebaseUser.uid);
 
       const entries = await db.entries.toArray();
-      setStatus(`✅ Sync complete!\n\n- User data (salt) saved to Firestore\n- ${entries.length} entries uploaded to Firestore\n\nYou can now log in from other devices!\n\nFirebase console:\nhttps://console.firebase.google.com/project/idanvaultproduction/firestore/databases/-default-/data`);
+      setStatus(`✅ Sync complete!\n\n- User data (salt) saved to Firestore\n- ${entries.length} entries uploaded to Firestore\n- Real-time sync activated\n\nYou can now log in from other devices!\n\nFirebase console:\nhttps://console.firebase.google.com/project/idanvaultproduction/firestore/databases/-default-/data`);
     } catch (err) {
       setStatus(`❌ Sync error: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
