@@ -144,6 +144,18 @@ export class BiometricAuth {
   }
 
   /**
+   * Update the stored encryption key and credentials
+   * Call after successful password login/unlock to keep biometric key in sync
+   */
+  static updateStoredKey(encryptionKey: string, email?: string, password?: string) {
+    if (!this.isEnabled()) return;
+    localStorage.setItem(ENCRYPTED_KEY_STORE, encryptionKey);
+    if (email && password) {
+      localStorage.setItem(BIOMETRIC_CREDS, JSON.stringify({ email, password }));
+    }
+  }
+
+  /**
    * Remove biometric auth data
    */
   static clear() {

@@ -10,6 +10,7 @@ import { auth } from '@/lib/firebase';
 import { db, User } from '@/lib/db';
 import { CryptoService } from '@/lib/crypto';
 import { FirebaseSync } from '@/lib/firebaseSync';
+import { BiometricAuth } from '@/lib/biometric';
 import { v4 as uuid } from 'uuid';
 
 interface AuthState {
@@ -235,6 +236,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Store credentials for re-authentication
     CryptoService.setCredentials(email, masterPassword);
 
+    // Keep biometric-stored key in sync
+    BiometricAuth.updateStoredKey(CryptoService.getEncryptionKey(), email, masterPassword);
+
     // Start Firebase sync
     FirebaseSync.startSync(userCredential.user.uid);
 
@@ -284,6 +288,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Store encryption key and credentials in memory
     CryptoService.setEncryptionKey(encryptionKey);
     CryptoService.setCredentials(user.email, masterPassword);
+
+    // Keep biometric-stored key in sync
+    BiometricAuth.updateStoredKey(encryptionKey, user.email, masterPassword);
 
     // Restart Firebase sync
     FirebaseSync.startSync(firebaseUser.uid);
