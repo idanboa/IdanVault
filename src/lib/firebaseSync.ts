@@ -5,12 +5,10 @@ import {
   deleteDoc,
   onSnapshot,
   query,
-  where,
-  Timestamp
+  where
 } from 'firebase/firestore';
 import { firestore } from './firebase';
 import { db, Entry } from './db';
-import { CryptoService } from './crypto';
 
 export class FirebaseSync {
   private static unsubscribe: (() => void) | null = null;

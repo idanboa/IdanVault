@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Entry } from '@/lib/db';
-import { CryptoService } from '@/lib/crypto';
 import { useAuthStore } from '@/store/authStoreFirebase';
 import { useEntries } from '@/hooks/useEntriesFirebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
