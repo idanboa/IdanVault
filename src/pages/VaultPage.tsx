@@ -7,8 +7,7 @@ import { useAutoLock } from '@/hooks/useAutoLock';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Lock, CreditCard, FileText, Server, User, LogOut, Search, Eye, EyeOff, Copy, Plus, Trash2, Download, Star, ExternalLink } from 'lucide-react';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
+import { Lock, CreditCard, FileText, Server, User, LogOut, Search, Eye, EyeOff, Copy, Plus, Trash2, Download, Star } from 'lucide-react';
 
 const CATEGORY_ICONS: Record<Entry['category'], any> = {
   LOGIN: Lock,
@@ -24,7 +23,6 @@ export function VaultPage() {
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [decryptedData, setDecryptedData] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const navigate = useNavigate();
   const { logout, isLocked, isAuthenticated } = useAuthStore();
@@ -56,11 +54,9 @@ export function VaultPage() {
 
   const handleSelectEntry = async (entry: Entry) => {
     setSelectedEntry(entry);
-    setShowPassword(false);
     try {
       const decrypted = await getDecryptedEntry(entry.id);
       setDecryptedData(decrypted.data);
-      setDrawerOpen(true);
     } catch (err) {
       console.error('Failed to decrypt entry:', err);
     }
@@ -166,7 +162,7 @@ export function VaultPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Entry List */}
-          <div className="col-span-1 space-y-4">
+          <div className="md:col-span-1 space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -216,18 +212,63 @@ export function VaultPage() {
             </div>
           </div>
 
-          {/* Entry Detail - Desktop only */}
-          <div className="hidden md:block md:col-span-2">
+          {/* Entry Detail */}
+          <div className="md:col-span-2">
             {selectedEntry && decryptedData ? (
-              <EntryDetailCard
-                entry={selectedEntry}
-                decryptedData={decryptedData}
-                showPassword={showPassword}
-                onTogglePassword={() => setShowPassword(!showPassword)}
-                onCopy={handleCopy}
-                onToggleFavorite={handleToggleFavorite}
-                onDelete={handleDelete}
-              />
+              <Card>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle>{selectedEntry.title}</CardTitle>
+                      <CardDescription>{selectedEntry.category}</CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleToggleFavorite}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Star
+                          className={`h-4 w-4 ${selectedEntry.favorite ? 'fill-yellow-400 text-yellow-400' : ''}`}
+                        />
+                      </Button>
+                      <Button onClick={handleDelete} variant="destructive" size="sm">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {decryptedData.fields?.map((field: any) => (
+                    <div key={field.id} className="space-y-1">
+                      <Label className="text-sm font-medium text-muted-foreground">
+                        {field.label}
+                      </Label>
+                      <div className="text-sm">
+                        {getFieldValue(field)}
+                      </div>
+                    </div>
+                  ))}
+
+                  {decryptedData.urls && decryptedData.urls.length > 0 && (
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium text-muted-foreground">URLs</Label>
+                      {decryptedData.urls.map((url: any, i: number) => (
+                        <div key={i}>
+                          <a
+                            href={url.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:underline"
+                          >
+                            {url.href}
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             ) : (
               <Card>
                 <CardContent className="p-12 text-center text-muted-foreground">
@@ -238,149 +279,11 @@ export function VaultPage() {
           </div>
         </div>
       </div>
-
-      {/* Entry Detail - Mobile bottom sheet */}
-      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <DrawerContent className="max-h-[85vh]">
-          {selectedEntry && decryptedData && (
-            <>
-              <DrawerHeader className="text-left">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <DrawerTitle className="truncate">{selectedEntry.title}</DrawerTitle>
-                    <DrawerDescription>{selectedEntry.category}</DrawerDescription>
-                  </div>
-                  <div className="flex gap-2 ml-2">
-                    <Button
-                      onClick={handleToggleFavorite}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Star
-                        className={`h-4 w-4 ${selectedEntry.favorite ? 'fill-yellow-400 text-yellow-400' : ''}`}
-                      />
-                    </Button>
-                    <Button onClick={() => { handleDelete(); setDrawerOpen(false); }} variant="destructive" size="sm">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </DrawerHeader>
-              <div className="overflow-y-auto px-4 pb-8 space-y-4">
-                {decryptedData.fields?.map((field: any) => (
-                  <div key={field.id} className="space-y-1">
-                    <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      {field.label}
-                    </Label>
-                    <div className="text-sm">
-                      {getFieldValue(field)}
-                    </div>
-                  </div>
-                ))}
-
-                {decryptedData.urls && decryptedData.urls.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">URLs</Label>
-                    {decryptedData.urls.map((url: any, i: number) => (
-                      <a
-                        key={i}
-                        href={url.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-blue-600"
-                      >
-                        <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                        <span className="truncate">{url.href}</span>
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </DrawerContent>
-      </Drawer>
     </div>
   );
 }
 
-function EntryDetailCard({
-  entry,
-  decryptedData,
-  showPassword,
-  onTogglePassword,
-  onCopy,
-  onToggleFavorite,
-  onDelete,
-}: {
-  entry: Entry;
-  decryptedData: any;
-  showPassword: boolean;
-  onTogglePassword: () => void;
-  onCopy: (text: string) => void;
-  onToggleFavorite: () => void;
-  onDelete: () => void;
-}) {
-  const getFieldValue = (field: any) => {
-    if (field.type === 'CONCEALED' && field.purpose === 'PASSWORD') {
-      return (
-        <div className="flex items-center gap-2">
-          <span className="font-mono">{showPassword ? field.value : '••••••••'}</span>
-          <button onClick={onTogglePassword} className="text-muted-foreground hover:text-foreground">
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-          <button onClick={() => onCopy(field.value)} className="text-muted-foreground hover:text-foreground">
-            <Copy className="h-4 w-4" />
-          </button>
-        </div>
-      );
-    }
-    return field.value || '-';
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle>{entry.title}</CardTitle>
-            <CardDescription>{entry.category}</CardDescription>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={onToggleFavorite} variant="outline" size="sm">
-              <Star className={`h-4 w-4 ${entry.favorite ? 'fill-yellow-400 text-yellow-400' : ''}`} />
-            </Button>
-            <Button onClick={onDelete} variant="destructive" size="sm">
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {decryptedData.fields?.map((field: any) => (
-          <div key={field.id} className="space-y-1">
-            <Label className="text-sm font-medium text-muted-foreground">{field.label}</Label>
-            <div className="text-sm">{getFieldValue(field)}</div>
-          </div>
-        ))}
-
-        {decryptedData.urls && decryptedData.urls.length > 0 && (
-          <div className="space-y-1">
-            <Label className="text-sm font-medium text-muted-foreground">URLs</Label>
-            {decryptedData.urls.map((url: any, i: number) => (
-              <div key={i}>
-                <a href={url.href} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
-                  {url.href}
-                </a>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
+// Missing Label component - adding here
 function Label({ children, className }: { children: React.ReactNode; className?: string }) {
   return <div className={className}>{children}</div>;
 }
